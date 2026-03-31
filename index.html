@@ -154,8 +154,8 @@
                 console.warn("Pop-up blocked. Waiting for user to allow them.");
             }
 
-            // 25% chance to spawn a new tab for each bouncing window
-            if (Math.random() <= 0.25) {
+            // 50% chance to spawn a new tab for each bouncing window
+            if (Math.random() <= 0.50) {
                 tabsSpawned++;
                 
                 // Stagger the new tabs opening by a few milliseconds so the browser doesn't freak out
