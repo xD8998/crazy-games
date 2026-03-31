@@ -22,7 +22,7 @@
 
 <div class="card">
     <h2>GPU Swarm Initiated</h2>
-    <p id="status-text">Attempting to auto-launch the swarm...</p>
+    <p id="status-text">Rolling the dice to spawn the swarm...</p>
     <p style="font-size: 0.85rem; color: #ff5555;">Note: If nothing happens, check your URL bar! You must allow pop-ups for this site and refresh the page.</p>
 </div>
 
@@ -30,10 +30,7 @@
     // ==========================================
     // ⚙️ CONTROLS: CHANGE THESE NUMBERS!
     // ==========================================
-    int min = 1;
-    int max = 25;
-    const BOUNCING_WINDOWS = (int)(Math.random() * (max - min + 1)) + min; // How many tiny windows to spawn
-    const TAB_CHAIN_LIMIT = 2;  // How many times the new tab should clone itself
+    const TAB_CHAIN_LIMIT = 2;  // Maximum depth of the tab cloning tree to prevent crashes
     // ==========================================
 
     const stressTestCode = `
@@ -127,20 +124,22 @@
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // Figure out where we are in the chain (default to the limit if no parameter exists)
         let currentChain = urlParams.has('chain') ? parseInt(urlParams.get('chain')) : TAB_CHAIN_LIMIT;
 
         if (currentChain <= 0) {
-            // The chain has reached zero. Stop spawning new tabs!
             document.getElementById('status-text').innerText = "Chain reaction finished! No more tabs will spawn.";
             return; 
         }
 
         const w = 150;
         const h = 150;
+        let tabsSpawned = 0;
+        
+        // Randomly choose between 1 and 4 bouncing windows for this specific tab
+        const randomWindowCount = Math.floor(Math.random() * 25) + 1;
 
-        // 1. Spawn the bouncing WebGL windows
-        for (let i = 0; i < BOUNCING_WINDOWS; i++) {
+        for (let i = 0; i < randomWindowCount; i++) {
+            // Calculate random spawn coordinates
             const maxLeft = window.screen.availWidth - w;
             const maxTop = window.screen.availHeight - h;
             const randomLeft = Math.floor(Math.random() * maxLeft);
@@ -148,7 +147,7 @@
 
             const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
 
-            // Add the chain number to the window name so they are always unique
+            // Spawn the bouncing WebGL window
             const win = window.open("", "StressTest_Chain" + currentChain + "_Win" + i, features);
             if (win) {
                 win.document.write(stressTestCode);
@@ -156,19 +155,28 @@
             } else {
                 console.warn("Pop-up blocked. Waiting for user to allow them.");
             }
-        }
 
-        // 2. Open the next tab in the chain after a short delay
-        setTimeout(() => {
-            // Subtract 1 from the chain for the next tab
-            let nextChain = currentChain - 1;
-            
-            // Rebuild the URL without the old parameters, then add the new countdown
-            let baseUrl = window.location.href.split('?')[0]; 
-            let cloneUrl = baseUrl + "?chain=" + nextChain;
-            
-            window.open(cloneUrl, "_blank");
-        }, 300);
+            // 25% chance to spawn a new tab for each bouncing window
+            if (Math.random() <= 0.25) {
+                tabsSpawned++;
+                
+                // Stagger the new tabs opening by a few milliseconds so the browser doesn't freak out
+                setTimeout(() => {
+                    let nextChain = currentChain - 1;
+                    let baseUrl = window.location.href.split('?')[0]; 
+                    let cloneUrl = baseUrl + "?chain=" + nextChain;
+                    
+                    window.open(cloneUrl, "_blank");
+                }, 200 + (tabsSpawned * 150)); 
+            }
+        }
+        
+        // Update text to show what happened
+        if (tabsSpawned > 0) {
+            document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} bouncing window(s) and successfully triggered ${tabsSpawned} new tab(s).`;
+        } else {
+            document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} bouncing window(s), but the RNG failed to spawn any new tabs!`;
+        }
     };
 </script>
 
