@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GPU Stress Launcher</title>
+    <style>
+        body { 
+            background: #111; color: #eee; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; height: 100vh; margin: 0;
+        }
+        .card {
+            background: #222; padding: 2rem; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
+            border: 1px solid #333;
+        }
+        button {
+            padding: 12px 24px; font-size: 1.1rem; font-weight: bold;
+            background: #007bff; color: white; border: none;
+            border-radius: 6px; cursor: pointer; transition: 0.2s;
+        }
+        button:hover { background: #0056b3; transform: scale(1.05); }
+        p { opacity: 0.8; font-size: 0.9rem; max-width: 300px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>GPU Stress Test</h2>
+    <p>Spawns THREE tiny bouncing windows that automatically scale complexity exponentially until they crash.</p>
+    <button id="launch">Launch Bouncing Swarm</button>
+</div>
+
+<script>
+    const stressTestCode = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>TEST</title>
+            <style>
+                body { margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: monospace; }
+                canvas { display: block; width: 100vw; height: 100vh; }
+                #stats { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); padding: 5px; border: 1px solid #333; pointer-events: none; font-size: 10px; }
+            </style>
+        </head>
+        <body>
+            <div id="stats">
+                FPS:<span id="fps">--</span> C:<span id="comp">--</span>
+            </div>
+            <canvas id="c"></canvas>
+            <script>
+                const canvas = document.getElementById('c');
+                const gl = canvas.getContext('webgl');
+                let complexity = 10;
+                let lastTime = 0;
+
+                const vs = "attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }";
+                const fs = "precision highp float; uniform float t; uniform vec2 r; uniform float c; void main(){ vec2 uv=(gl_FragCoord.xy-0.5*r)/r.y; vec3 col=vec3(0); vec3 ro=vec3(0,0,-3); vec3 rd=normalize(vec3(uv,1)); float d=0.0; for(float i=0.0; i<500.0; i++){ if(i>c)break; vec3 p=ro+rd*d; for(int j=0; j<8; j++){ p=abs(p)-0.5; p*=1.5; p=vec3(p.x*cos(t)-p.y*sin(t), p.x*sin(t)+p.y*cos(t), p.z); } float dist=length(p)*0.01; d+=dist; if(dist<0.001||d>20.0)break; col+=0.005*vec3(sin(d),cos(d*0.5),1.0); } gl_FragColor=vec4(col,1.0); }";
+
+                function createS(gl, type, src) {
+                    const s = gl.createShader(type);
+                    gl.shaderSource(s, src);
+                    gl.compileShader(s);
+                    return s;
+                }
+
+                const prog = gl.createProgram();
+                gl.attachShader(prog, createS(gl, gl.VERTEX_SHADER, vs));
+                gl.attachShader(prog, createS(gl, gl.FRAGMENT_SHADER, fs));
+                gl.linkProgram(prog);
+                gl.useProgram(prog);
+
+                const b = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, b);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+                const pL = gl.getAttribLocation(prog, "p");
+                gl.enableVertexAttribArray(pL);
+                gl.vertexAttribPointer(pL, 2, gl.FLOAT, false, 0, 0);
+
+                const tL = gl.getUniformLocation(prog, "t");
+                const rL = gl.getUniformLocation(prog, "r");
+                const cL = gl.getUniformLocation(prog, "c");
+
+                function loop(now) {
+                    now *= 0.001;
+                    const dt = now - lastTime;
+                    lastTime = now;
+                    
+                    document.getElementById('fps').innerText = Math.round(1/dt);
+                    document.getElementById('comp').innerText = Math.floor(complexity);
+
+                    // Automatic Exponential Growth
+                    complexity *= 1.01;
+
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    gl.viewport(0,0,canvas.width, canvas.height);
+                    gl.uniform1f(tL, now);
+                    gl.uniform2f(rL, canvas.width, canvas.height);
+                    gl.uniform1f(cL, complexity);
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+                    requestAnimationFrame(loop);
+                }
+
+                requestAnimationFrame(loop);
+
+                // --- Window Movement Logic ---
+                // Randomizing starting direction and slight speed differences
+                let velX = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
+                let velY = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
+
+                setInterval(() => {
+                    // Bounce off the edges of the screen
+                    if (window.screenX <= 0 || window.screenX + window.outerWidth >= screen.availWidth) {
+                        velX *= -1;
+                    }
+                    if (window.screenY <= 0 || window.screenY + window.outerHeight >= screen.availHeight) {
+                        velY *= -1;
+                    }
+                    window.moveBy(velX, velY);
+                }, 16);
+            <\/script>
+        </body>
+        </html>
+    `;
+
+    document.getElementById('launch').onclick = () => {
+        // Loop 3 times to spawn 3 windows
+        for (let i = 0; i < 3; i++) {
+            const w = 150;
+            const h = 150;
+            
+            // Calculate random spawn coordinates within the screen bounds
+            const maxLeft = window.screen.availWidth - w;
+            const maxTop = window.screen.availHeight - h;
+            const randomLeft = Math.floor(Math.random() * maxLeft);
+            const randomTop = Math.floor(Math.random() * maxTop);
+
+            const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
+
+            // Add the index 'i' to the window name so they don't overwrite each other
+            const win = window.open("", "StressTest" + i, features);
+            if (win) {
+                win.document.write(stressTestCode);
+                win.document.close();
+            } else {
+                alert("Pop-up blocked! Please allow pop-ups for this page to see the bouncing windows.");
+                break; // Stop trying if the browser blocks the first one
+            }
+        }
+    };
+</script>
+
+</body>
+</html>
