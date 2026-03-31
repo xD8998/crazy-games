@@ -71,7 +71,7 @@
                     now *= 0.001; const dt = now - lastTime; lastTime = now;
                     document.getElementById('fps').innerText = Math.round(1/dt);
                     document.getElementById('comp').innerText = Math.floor(complexity);
-                    complexity *= 1.01;
+                    complexity *= 1.03;
                     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
                     gl.viewport(0,0,canvas.width, canvas.height);
                     gl.uniform1f(tL, now); gl.uniform2f(rL, canvas.width, canvas.height); gl.uniform1f(cL, complexity);
