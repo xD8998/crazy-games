@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GPU Swarm: Reliability Mode</title>
+    <title>GPU Swarm Controller</title>
     <style>
         body { 
             background: #111; color: #eee; 
@@ -15,28 +15,27 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
             border: 1px solid #333;
         }
-        h2 { color: #007bff; margin-bottom: 0.5rem; }
-        p { opacity: 0.8; font-size: 1rem; max-width: 400px; margin: 0.5rem 0; }
-        #chain-status { font-weight: bold; color: #00ff00; margin-top: 1rem; }
+        p { opacity: 0.8; font-size: 1rem; max-width: 400px; }
+        .highlight { color: #007bff; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Swarm Status</h2>
-    <p id="status-text">Spawning windows...</p>
-    <p id="chain-status">Chain Pending...</p>
-    <hr style="border: 0; border-top: 1px solid #444; margin: 1rem 0;">
-    <p style="font-size: 0.8rem; color: #ffaa00;">Tip: If the next tab didn't open, try clicking anywhere on this page or switching away and coming back!</p>
+    <h2>Swarm Status: Active</h2>
+    <p id="status-text">Initializing Windows...</p>
+    <p id="chain-text" class="highlight"></p>
+    <p style="font-size: 0.85rem; color: #ff5555;">Try leaving this tab and coming back to trigger a bonus clone!</p>
 </div>
 
 <script>
     // ==========================================
-    // ⚙️ GLOBAL CONTROLS
+    // ⚙️ CONTROLS
     // ==========================================
     const TAB_CHAIN_LIMIT = 500; 
-    let tabSpawned = false; // Flag to prevent duplicate tab spawns
     // ==========================================
+
+    let returnTabTriggered = false; // Prevents infinite loops on a single tab
 
     const stressTestCode = `
         <!DOCTYPE html>
@@ -45,15 +44,17 @@
             <style>
                 body { margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: monospace; }
                 canvas { display: block; width: 100vw; height: 100vh; }
-                #stats { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); padding: 5px; border: 1px solid #333; font-size: 10px; }
+                #stats { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); padding: 5px; border: 1px solid #333; pointer-events: none; font-size: 10px; }
             </style>
         </head>
         <body>
             <div id="stats">FPS:<span id="fps">--</span> C:<span id="comp">--</span></div>
             <canvas id="c"></canvas>
             <script>
-                const canvas = document.getElementById('c'), gl = canvas.getContext('webgl');
-                let complexity = 10, lastTime = 0;
+                const canvas = document.getElementById('c');
+                const gl = canvas.getContext('webgl');
+                let complexity = 10;
+                let lastTime = 0;
                 const vs = "attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }";
                 const fs = "precision highp float; uniform float t; uniform vec2 r; uniform float c; void main(){ vec2 uv=(gl_FragCoord.xy-0.5*r)/r.y; vec3 col=vec3(0); vec3 ro=vec3(0,0,-3); vec3 rd=normalize(vec3(uv,1)); float d=0.0; for(float i=0.0; i<500.0; i++){ if(i>c)break; vec3 p=ro+rd*d; for(int j=0; j<8; j++){ p=abs(p)-0.5; p*=1.5; p=vec3(p.x*cos(t)-p.y*sin(t), p.x*sin(t)+p.y*cos(t), p.z); } float dist=length(p)*0.01; d+=dist; if(dist<0.001||d>20.0)break; col+=0.005*vec3(sin(d),cos(d*0.5),1.0); } gl_FragColor=vec4(col,1.0); }";
                 function createS(gl, type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
@@ -89,66 +90,63 @@
         </html>
     `;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    let currentChain = urlParams.has('chain') ? parseInt(urlParams.get('chain')) : TAB_CHAIN_LIMIT;
-
-    // --- FUNCTION: Open the Next Tab ---
-    function triggerNextTab() {
-        if (tabSpawned || currentChain <= 0) return;
-
-        const nextChain = currentChain - 1;
+    function openNextTab(chainVal) {
+        if (chainVal <= 0) return;
         const baseUrl = window.location.href.split('?')[0]; 
-        const cloneUrl = baseUrl + "?chain=" + nextChain;
-        
-        const newTab = window.open(cloneUrl, "_blank");
-        
-        if (newTab) {
-            tabSpawned = true;
-            document.getElementById('chain-status').innerText = `✅ Next Tab Active (${nextChain} left)`;
-            document.getElementById('chain-status').style.color = "#00ff00";
-        } else {
-            document.getElementById('chain-status').innerText = "⚠️ Next Tab Blocked - Click the page or come back later!";
-            document.getElementById('chain-status').style.color = "#ffcc00";
-        }
+        const cloneUrl = baseUrl + "?chain=" + (chainVal - 1);
+        window.open(cloneUrl, "_blank");
     }
 
-    // --- TRIGGER 1: On Initial Page Load ---
     window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentChain = urlParams.has('chain') ? parseInt(urlParams.get('chain')) : TAB_CHAIN_LIMIT;
+
         if (currentChain <= 0) {
-            document.getElementById('status-text').innerText = "Chain Finished.";
-            document.getElementById('chain-status').innerText = "Limit Reached.";
+            document.getElementById('status-text').innerText = "Swarm Complete.";
+            document.getElementById('chain-text').innerText = "Chain limit reached.";
             return; 
         }
 
         const w = 150, h = 150;
         const randomWindowCount = Math.floor(Math.random() * 4) + 1;
 
-        // Spawn Bouncing/VSBM Windows
+        // 1. Spawn the windows (75% Stress, 25% VSBM)
         for (let i = 0; i < randomWindowCount; i++) {
-            const left = Math.floor(Math.random() * (window.screen.availWidth - w));
-            const top = Math.floor(Math.random() * (window.screen.availHeight - h));
+            const maxLeft = window.screen.availWidth - w;
+            const maxTop = window.screen.availHeight - h;
+            const left = Math.floor(Math.random() * maxLeft);
+            const top = Math.floor(Math.random() * maxTop);
             const feat = `width=${w},height=${h},left=${left},top=${top}`;
 
             if (Math.random() <= 0.25) {
-                window.open("https://cznull.github.io/vsv", "StaticWin_" + currentChain + "_" + i, feat);
+                window.open("https://cznull.github.io/vsv", "StaticWin_" + Date.now() + i, feat);
             } else {
-                const win = window.open("", "StressWin_" + currentChain + "_" + i, feat);
-                if (win) { win.document.write(stressTestCode); win.document.close(); }
+                const win = window.open("", "StressWin_" + Date.now() + i, feat);
+                if (win) {
+                    win.document.write(stressTestCode);
+                    win.document.close();
+                }
             }
         }
 
         document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} window(s).`;
-        
-        // Attempt the next tab after 500ms
-        setTimeout(triggerNextTab, 500);
-    };
+        document.getElementById('chain-text').innerText = `Chain depth: ${currentChain}`;
 
-    // --- TRIGGER 2: If you leave and come back (The "Full Assurance" Logic) ---
-    window.onfocus = () => {
-        if (!tabSpawned && currentChain > 0) {
-            console.log("Window focused: Attempting tab spawn recovery...");
-            triggerNextTab();
-        }
+        // 2. Guaranteed Tab on Load
+        setTimeout(() => {
+            openNextTab(currentChain);
+        }, 500);
+
+        // 3. AUTO-TAB ON RETURN
+        // This watches for when you leave and come back to this specific tab
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && !returnTabTriggered) {
+                console.log("Welcome back! Spawning bonus tab...");
+                returnTabTriggered = true; 
+                openNextTab(currentChain); 
+                document.getElementById('status-text').innerText += " (Bonus tab triggered by return!)";
+            }
+        });
     };
 </script>
 
