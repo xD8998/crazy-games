@@ -22,7 +22,7 @@
 
 <div class="card">
     <h2>GPU Swarm Initiated</h2>
-    <p>Attempting to auto-launch the swarm...</p>
+    <p>Attempting to auto-launch the swarm and open a new tab...</p>
     <p style="font-size: 0.85rem; color: #ff5555;">Note: If nothing happens, check your URL bar! You must allow pop-ups for this site and refresh the page.</p>
 </div>
 
@@ -140,17 +140,10 @@
             }
         }
 
-        // 2. Spawn the 4th static window after 200 milliseconds
+        // 2. Open the 4th link in a standard new tab after 200 milliseconds
         setTimeout(() => {
-            const maxLeft = window.screen.availWidth - w;
-            const maxTop = window.screen.availHeight - h;
-            const randomLeft = Math.floor(Math.random() * maxLeft);
-            const randomTop = Math.floor(Math.random() * maxTop);
-
-            const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
-            
-            // Open the external URL (cannot be moved by script due to CORS)
-            window.open("https://xd8998.github.io/crazy-games/", "CrazyGamesWindow", features);
+            // Using "_blank" without features forces a new tab instead of a sized pop-up
+            window.open("https://xd8998.github.io/crazy-games/", "_blank");
         }, 200);
     };
 </script>
