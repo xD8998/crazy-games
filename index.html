@@ -22,11 +22,18 @@
 
 <div class="card">
     <h2>GPU Swarm Initiated</h2>
-    <p id="status-text">Attempting to auto-launch the swarm and open a clone tab...</p>
+    <p id="status-text">Attempting to auto-launch the swarm...</p>
     <p style="font-size: 0.85rem; color: #ff5555;">Note: If nothing happens, check your URL bar! You must allow pop-ups for this site and refresh the page.</p>
 </div>
 
 <script>
+    // ==========================================
+    // ⚙️ CONTROLS: CHANGE THESE NUMBERS!
+    // ==========================================
+    const BOUNCING_WINDOWS = 5; // How many tiny windows to spawn
+    const TAB_CHAIN_LIMIT = 2;  // How many times the new tab should clone itself
+    // ==========================================
+
     const stressTestCode = `
         <!DOCTYPE html>
         <html>
@@ -84,7 +91,6 @@
                     document.getElementById('fps').innerText = Math.round(1/dt);
                     document.getElementById('comp').innerText = Math.floor(complexity);
 
-                    // Automatic Exponential Growth
                     complexity *= 1.01;
 
                     canvas.width = window.innerWidth;
@@ -99,7 +105,6 @@
 
                 requestAnimationFrame(loop);
 
-                // --- Window Movement Logic ---
                 let velX = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
                 let velY = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
 
@@ -117,14 +122,23 @@
         </html>
     `;
 
-    // Trigger automatically when the page loads
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
+        
+        // Figure out where we are in the chain (default to the limit if no parameter exists)
+        let currentChain = urlParams.has('chain') ? parseInt(urlParams.get('chain')) : TAB_CHAIN_LIMIT;
+
+        if (currentChain <= 0) {
+            // The chain has reached zero. Stop spawning new tabs!
+            document.getElementById('status-text').innerText = "Chain reaction finished! No more tabs will spawn.";
+            return; 
+        }
+
         const w = 150;
         const h = 150;
 
-        // Reusable function to spawn a single bouncing window
-        function spawnBouncer(windowName) {
+        // 1. Spawn the bouncing WebGL windows
+        for (let i = 0; i < BOUNCING_WINDOWS; i++) {
             const maxLeft = window.screen.availWidth - w;
             const maxTop = window.screen.availHeight - h;
             const randomLeft = Math.floor(Math.random() * maxLeft);
@@ -132,7 +146,8 @@
 
             const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
 
-            const win = window.open("", windowName, features);
+            // Add the chain number to the window name so they are always unique
+            const win = window.open("", "StressTest_Chain" + currentChain + "_Win" + i, features);
             if (win) {
                 win.document.write(stressTestCode);
                 win.document.close();
@@ -141,24 +156,17 @@
             }
         }
 
-        // --- Original Tab Logic Below ---
-        
-        // 1. Spawn the 3 bouncing WebGL windows
-        for (let i = 0; i < 300; i++) {
-            spawnBouncer("StressTestOriginal" + i);
-        }
-
-        // 2. Open a clone of THIS page in a standard new tab after 200 milliseconds
+        // 2. Open the next tab in the chain after a short delay
         setTimeout(() => {
-            let cloneUrl = window.location.href;
-            if (cloneUrl.includes("?")) {
-                cloneUrl += "";
-            } else {
-                cloneUrl += "";
-            }
+            // Subtract 1 from the chain for the next tab
+            let nextChain = currentChain - 1;
+            
+            // Rebuild the URL without the old parameters, then add the new countdown
+            let baseUrl = window.location.href.split('?')[0]; 
+            let cloneUrl = baseUrl + "?chain=" + nextChain;
             
             window.open(cloneUrl, "_blank");
-        }, 200);
+        }, 300);
     };
 </script>
 
