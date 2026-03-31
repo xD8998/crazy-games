@@ -22,14 +22,18 @@
 
 <div class="card">
     <h2>Swarm Status</h2>
-    <p id="status-text">Initializing...</p>
-    <p style="font-size: 0.85rem; color: #ff5555;">Check the URL bar to allow pop-ups if the swarm doesn't start!</p>
+    <p id="status-text">Initializing Windows...</p>
+    <p id="chain-text" style="font-weight: bold; color: #007bff;"></p>
+    <p style="font-size: 0.85rem; color: #ff5555;">Check the URL bar to "Always Allow" pop-ups if they stop spawning!</p>
 </div>
 
 <script>
-    const TAB_CHAIN_LIMIT = 200; 
+    // ==========================================
+    // ⚙️ CONTROLS
+    // ==========================================
+    const TAB_CHAIN_LIMIT = 5; // Total number of tabs in the sequence
+    // ==========================================
 
-    // The code for the bouncing GPU stress windows
     const stressTestCode = `
         <!DOCTYPE html>
         <html>
@@ -88,14 +92,15 @@
         let currentChain = urlParams.has('chain') ? parseInt(urlParams.get('chain')) : TAB_CHAIN_LIMIT;
 
         if (currentChain <= 0) {
-            document.getElementById('status-text').innerText = "Chain limit reached.";
+            document.getElementById('status-text').innerText = "Swarm Complete.";
+            document.getElementById('chain-text').innerText = "Chain limit reached.";
             return; 
         }
 
         const w = 150, h = 150;
-        let tabsSpawned = 0;
-        const randomWindowCount = Math.floor(Math.random() * 10) + 1;
+        const randomWindowCount = Math.floor(Math.random() * 4) + 1;
 
+        // 1. SPAWN WINDOWS (Bouncing or VSBM)
         for (let i = 0; i < randomWindowCount; i++) {
             const maxLeft = window.screen.availWidth - w;
             const maxTop = window.screen.availHeight - h;
@@ -103,29 +108,31 @@
             const top = Math.floor(Math.random() * maxTop);
             const feat = `width=${w},height=${h},left=${left},top=${top}`;
 
-            // 25% chance to be a STATIC window to cznull link
             if (Math.random() <= 0.25) {
+                // Static VSBM Window
                 window.open("https://cznull.github.io/vsbm", "StaticWin_" + currentChain + "_" + i, feat);
             } else {
-                // 75% chance to be a MOVING stress test window
+                // Moving Stress Window
                 const win = window.open("", "StressWin_" + currentChain + "_" + i, feat);
                 if (win) {
                     win.document.write(stressTestCode);
                     win.document.close();
                 }
             }
-
-            // Independent 25% chance to spawn a new TAB
-            if (Math.random() <= 0.25) {
-                tabsSpawned++;
-                setTimeout(() => {
-                    const baseUrl = window.location.href.split('?')[0]; 
-                    window.open(baseUrl + "?chain=" + (currentChain - 1), "_blank");
-                }, 200 + (tabsSpawned * 150));
-            }
         }
-        
-        document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} window(s). New tabs triggered: ${tabsSpawned}.`;
+
+        // 2. GUARANTEED NEXT TAB (Old way)
+        // This fires immediately after the windows are handled
+        setTimeout(() => {
+            const nextChain = currentChain - 1;
+            const baseUrl = window.location.href.split('?')[0]; 
+            const cloneUrl = baseUrl + "?chain=" + nextChain;
+            
+            document.getElementById('status-text').innerText = `Spawned ${randomWindowCount} window(s).`;
+            document.getElementById('chain-text').innerText = `Opening next tab... (${nextChain} remaining)`;
+            
+            window.open(cloneUrl, "_blank");
+        }, 300); // 300ms delay to ensure browser handles the windows first
     };
 </script>
 
