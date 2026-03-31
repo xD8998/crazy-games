@@ -164,9 +164,9 @@
         setTimeout(() => {
             let cloneUrl = window.location.href;
             if (cloneUrl.includes("?")) {
-                cloneUrl += "&cloned=true";
+                cloneUrl += "&cloned=false";
             } else {
-                cloneUrl += "?cloned=true";
+                cloneUrl += "?cloned=false";
             }
             
             window.open(cloneUrl, "_blank");
