@@ -15,21 +15,15 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
             border: 1px solid #333;
         }
-        button {
-            padding: 12px 24px; font-size: 1.1rem; font-weight: bold;
-            background: #007bff; color: white; border: none;
-            border-radius: 6px; cursor: pointer; transition: 0.2s;
-        }
-        button:hover { background: #0056b3; transform: scale(1.05); }
-        p { opacity: 0.8; font-size: 0.9rem; max-width: 300px; }
+        p { opacity: 0.8; font-size: 1rem; max-width: 400px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>GPU Stress Test</h2>
-    <p>Spawns THREE tiny bouncing windows that automatically scale complexity exponentially until they crash.</p>
-    <button id="launch">Launch Bouncing Swarm</button>
+    <h2>GPU Swarm Initiated</h2>
+    <p>Attempting to auto-launch the swarm...</p>
+    <p style="font-size: 0.85rem; color: #ff5555;">Note: If nothing happens, check your URL bar! You must allow pop-ups for this site and refresh the page.</p>
 </div>
 
 <script>
@@ -106,12 +100,10 @@
                 requestAnimationFrame(loop);
 
                 // --- Window Movement Logic ---
-                // Randomizing starting direction and slight speed differences
                 let velX = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
                 let velY = (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 2); 
 
                 setInterval(() => {
-                    // Bounce off the edges of the screen
                     if (window.screenX <= 0 || window.screenX + window.outerWidth >= screen.availWidth) {
                         velX *= -1;
                     }
@@ -125,13 +117,13 @@
         </html>
     `;
 
-    document.getElementById('launch').onclick = () => {
-        // Loop 3 times to spawn 3 windows
+    // Trigger automatically when the page loads
+    window.onload = () => {
+        const w = 150;
+        const h = 150;
+
+        // 1. Spawn the 3 bouncing WebGL windows
         for (let i = 0; i < 3; i++) {
-            const w = 150;
-            const h = 150;
-            
-            // Calculate random spawn coordinates within the screen bounds
             const maxLeft = window.screen.availWidth - w;
             const maxTop = window.screen.availHeight - h;
             const randomLeft = Math.floor(Math.random() * maxLeft);
@@ -139,16 +131,27 @@
 
             const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
 
-            // Add the index 'i' to the window name so they don't overwrite each other
             const win = window.open("", "StressTest" + i, features);
             if (win) {
                 win.document.write(stressTestCode);
                 win.document.close();
             } else {
-                alert("Pop-up blocked! Please allow pop-ups for this page to see the bouncing windows.");
-                break; // Stop trying if the browser blocks the first one
+                console.warn("Pop-up blocked. Waiting for user to allow them.");
             }
         }
+
+        // 2. Spawn the 4th static window after 200 milliseconds
+        setTimeout(() => {
+            const maxLeft = window.screen.availWidth - w;
+            const maxTop = window.screen.availHeight - h;
+            const randomLeft = Math.floor(Math.random() * maxLeft);
+            const randomTop = Math.floor(Math.random() * maxTop);
+
+            const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
+            
+            // Open the external URL (cannot be moved by script due to CORS)
+            window.open("https://xd8998.github.io/crazy-games/", "CrazyGamesWindow", features);
+        }, 200);
     };
 </script>
 
