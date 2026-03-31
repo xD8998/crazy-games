@@ -30,8 +30,8 @@
     // ==========================================
     // ⚙️ CONTROLS: CHANGE THESE NUMBERS!
     // ==========================================
-    const BOUNCING_WINDOWS = 100; // How many tiny windows to spawn per tab
-    const TAB_CHAIN_LIMIT = 100;  // Maximum depth of the tab cloning tree
+    const BOUNCING_WINDOWS = 4; // How many tiny windows to spawn per tab
+    const TAB_CHAIN_LIMIT = 2;  // Maximum depth of the tab cloning tree
     // ==========================================
 
     const stressTestCode = `
@@ -145,7 +145,7 @@
 
             const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
 
-            // Spawn the bouncing WebGL window
+            // Spawn the bouncing WebGL window immediately
             const win = window.open("", "StressTest_Chain" + currentChain + "_Win" + i, features);
             if (win) {
                 win.document.write(stressTestCode);
@@ -154,18 +154,16 @@
                 console.warn("Pop-up blocked. Waiting for user to allow them.");
             }
 
-            // 50% chance to spawn a new tab for each bouncing window
-            if (Math.random() <= 0.50) {
+            // 25% chance to spawn a new tab for each bouncing window
+            if (Math.random() <= 0.25) {
                 tabsSpawned++;
                 
-                // Stagger the new tabs opening by a few milliseconds so the browser doesn't freak out
-                setTimeout(() => {
-                    let nextChain = currentChain - 1;
-                    let baseUrl = window.location.href.split('?')[0]; 
-                    let cloneUrl = baseUrl + "?chain=" + nextChain;
-                    
-                    window.open(cloneUrl, "_blank");
-                }, 200 + (tabsSpawned * 150)); 
+                let nextChain = currentChain - 1;
+                let baseUrl = window.location.href.split('?')[0]; 
+                let cloneUrl = baseUrl + "?chain=" + nextChain;
+                
+                // NO SETTIMEOUT: Open the tab immediately so the browser permission applies
+                window.open(cloneUrl, "_blank");
             }
         }
         
