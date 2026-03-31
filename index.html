@@ -141,18 +141,6 @@
             }
         }
 
-        // Check if this is the clone tab
-        if (urlParams.has('cloned')) {
-            // Update the text so you know which tab is which
-            document.getElementById('status-text').innerText = "I am the clone tab! I spawned exactly ONE bouncy boy, and I will not clone myself again.";
-            
-            // Spawn just 1 window for the clone
-            spawnBouncer("StressTestClone1");
-            
-            // Do NOT run the setTimeout clone logic, so it stops here.
-            return; 
-        }
-
         // --- Original Tab Logic Below ---
         
         // 1. Spawn the 3 bouncing WebGL windows
