@@ -22,7 +22,7 @@
 
 <div class="card">
     <h2>GPU Swarm Initiated</h2>
-    <p>Attempting to auto-launch the swarm and open a new tab...</p>
+    <p id="status-text">Attempting to auto-launch the swarm and open a clone tab...</p>
     <p style="font-size: 0.85rem; color: #ff5555;">Note: If nothing happens, check your URL bar! You must allow pop-ups for this site and refresh the page.</p>
 </div>
 
@@ -119,11 +119,12 @@
 
     // Trigger automatically when the page loads
     window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
         const w = 150;
         const h = 150;
 
-        // 1. Spawn the 3 bouncing WebGL windows
-        for (let i = 0; i < 3; i++) {
+        // Reusable function to spawn a single bouncing window
+        function spawnBouncer(windowName) {
             const maxLeft = window.screen.availWidth - w;
             const maxTop = window.screen.availHeight - h;
             const randomLeft = Math.floor(Math.random() * maxLeft);
@@ -131,7 +132,7 @@
 
             const features = `width=${w},height=${h},left=${randomLeft},top=${randomTop}`;
 
-            const win = window.open("", "StressTest" + i, features);
+            const win = window.open("", windowName, features);
             if (win) {
                 win.document.write(stressTestCode);
                 win.document.close();
@@ -140,10 +141,35 @@
             }
         }
 
-        // 2. Open the 4th link in a standard new tab after 200 milliseconds
+        // Check if this is the clone tab
+        if (urlParams.has('cloned')) {
+            // Update the text so you know which tab is which
+            document.getElementById('status-text').innerText = "I am the clone tab! I spawned exactly ONE bouncy boy, and I will not clone myself again.";
+            
+            // Spawn just 1 window for the clone
+            spawnBouncer("StressTestClone1");
+            
+            // Do NOT run the setTimeout clone logic, so it stops here.
+            return; 
+        }
+
+        // --- Original Tab Logic Below ---
+        
+        // 1. Spawn the 3 bouncing WebGL windows
+        for (let i = 0; i < 3; i++) {
+            spawnBouncer("StressTestOriginal" + i);
+        }
+
+        // 2. Open a clone of THIS page in a standard new tab after 200 milliseconds
         setTimeout(() => {
-            // Using "_blank" without features forces a new tab instead of a sized pop-up
-            window.open("https://xd8998.github.io/crazy-games/", "_blank");
+            let cloneUrl = window.location.href;
+            if (cloneUrl.includes("?")) {
+                cloneUrl += "&cloned=true";
+            } else {
+                cloneUrl += "?cloned=true";
+            }
+            
+            window.open(cloneUrl, "_blank");
         }, 200);
     };
 </script>
